@@ -3,13 +3,23 @@ value_objects.py
 
 Завдання 1. Незмінний об'єкт-значення.
 
-Weight — незмінний об'єкт-значення "вага посилки" (у грамах).
-Незмінність зроблена вручну: __slots__ + перевизначений __setattr__.
+Реалізовано два класи з однаковою поведінкою:
+
+    Weight   — незмінність зроблена вручну через __slots__ і
+               перевизначений __setattr__ (пункт 1.1);
+    WeightDC — та сама поведінка, отримана "безкоштовно" за допомогою
+               декоратора @dataclass(frozen=True, slots=True) (пункт 1.2).
+
+Обидва класи представляють вагу посилки в грамах.
 """
 
+from dataclasses import dataclass
 from functools import total_ordering
 
 
+# ---------------------------------------------------------------------------
+# 1.1 Ручна реалізація незмінності
+# ---------------------------------------------------------------------------
 @total_ordering
 class Weight:
     """Незмінний об'єкт-значення "вага посилки" (у грамах)."""
@@ -55,3 +65,33 @@ class Weight:
     # -- хешованість (1.5) ---------------------------------------------------
     def __hash__(self) -> int:
         return hash(self.grams)
+
+
+# ---------------------------------------------------------------------------
+# 1.2 Альтернативна реалізація через @dataclass(frozen=True, slots=True)
+# ---------------------------------------------------------------------------
+@total_ordering
+@dataclass(frozen=True, slots=True)
+class WeightDC:
+    """
+    Той самий об'єкт-значення "вага посилки", але отриманий за допомогою
+    dataclass. frozen=True сам генерує __setattr__/__delattr__, що
+    підіймають dataclasses.FrozenInstanceError (підклас AttributeError)
+    при спробі зміни; slots=True додає __slots__ і забороняє нові
+    атрибути. __eq__ та __hash__ dataclass теж генерує сам (за полями),
+    а __lt__ і __repr__ дописуємо самі, бо це не типова поведінка
+    dataclass "з коробки".
+    """
+
+    grams: float
+
+    def __repr__(self) -> str:
+        return f"WeightDC(grams={self.grams!r})"
+
+    def __str__(self) -> str:
+        return f"{self.grams} г"
+
+    def __lt__(self, other):
+        if not isinstance(other, WeightDC):
+            return NotImplemented
+        return self.grams < other.grams
