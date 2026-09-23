@@ -1,12 +1,3 @@
-"""
-demo.py
-
-Демонстрація роботи об'єкта-значення Weight (завдання 1, пункт 1.6).
-
-Запуск:
-    python -m courier_delivery.demo
-"""
-
 from courier_delivery.value_objects import Weight, WeightDC
 
 
@@ -15,8 +6,8 @@ def demo_weight() -> None:
     a = Weight(500)
     b = Weight(500)
     print(f"a = {a!r}, b = {b!r}")
-    print(f"a is b -> {a is b}")   # False: різні об'єкти в пам'яті
-    print(f"a == b -> {a == b}")   # True: рівність за вмістом полів
+    print(f"a is b -> {a is b}")
+    print(f"a == b -> {a == b}")
     print()
 
     print("=== 2. Weight як елемент set і ключ dict ===")
