@@ -1,5 +1,15 @@
 from courier_delivery.entities import Parcel
  
+ALLOWED_QUERY_CRITERIA = ("city", "weight_max")
+ 
+ 
+class ParcelNotFound(Exception):
+    """Підіймається Route.get(), коли посилки з таким tracking немає."""
+ 
+    def __init__(self, entity_id: str) -> None:
+        super().__init__(f"Посилку з трек-номером {entity_id!r} не знайдено")
+        self.entity_id = entity_id
+ 
  
 class Route:
     def __init__(self, parcels=()) -> None:
@@ -26,6 +36,31 @@ class Route:
     # -- посторінковий обхід (3.2) -------------------------------------------
     def pages(self, page_size: int) -> "RoutePageIterator":
         return RoutePageIterator(self, page_size)
+ 
+    # -- запит через виклик екземпляра як функції (3.3) ----------------------
+    def __call__(self, **criteria) -> "Route":
+        unknown = set(criteria) - set(ALLOWED_QUERY_CRITERIA)
+        if unknown:
+            raise TypeError(
+                f"Невідомі критерії запиту: {sorted(unknown)}. "
+                f"Припустимі критерії: {list(ALLOWED_QUERY_CRITERIA)}"
+            )
+ 
+        result = self._parcels
+        if "city" in criteria:
+            city = criteria["city"]
+            result = [p for p in result if p.dest_city == city]
+        if "weight_max" in criteria:
+            weight_max = criteria["weight_max"]
+            result = [p for p in result if p.weight.grams <= weight_max]
+        return Route(result)
+ 
+    # -- пошук за ідентифікатором у стилі EAFP (3.4) --------------------------
+    def get(self, entity_id: str) -> Parcel:
+        try:
+            return self._index[entity_id]
+        except KeyError:
+            raise ParcelNotFound(entity_id) from None
  
     def __repr__(self) -> str:
         return f"Route({self._parcels!r})"
