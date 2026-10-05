@@ -1,8 +1,10 @@
 import re
  
 from courier_delivery.value_objects import Weight
+from courier_delivery.decorators import validated
  
 TRACKING_PATTERN = re.compile(r"^[A-Z]{2}-\d{6,12}[A-Z]?$")
+STATUS_VALUES = ("created", "in_transit", "delivered", "returned")
  
  
 class Parcel:
@@ -11,6 +13,7 @@ class Parcel:
         self.weight = weight
         self.dest_city = dest_city
         self.cost = cost
+        self._status = "created"
  
     # -- tracking -------------------------------------------------------
     @property
@@ -65,6 +68,16 @@ class Parcel:
             raise ValueError("вартість доставки повинна бути додатною")
         self._cost = float(value)
  
+    # -- status (лише для читання ззовні; змінюється через change_status) ---
+    @property
+    def status(self) -> str:
+        return self._status
+ 
+    # -- зміна статусу, декорована валідаційним декоратором (5.1) -----------
+    @validated(status="one_of:" + ",".join(STATUS_VALUES))
+    def change_status(self, *, status: str) -> None:
+        self._status = status
+ 
     # -- альтернативний конструктор (2.2) -----------------------------------
     @classmethod
     def from_dict(cls, data: dict) -> "Parcel":
@@ -86,5 +99,6 @@ class Parcel:
     def __repr__(self) -> str:
         return (
             f"Parcel(tracking={self.tracking!r}, weight={self.weight}, "
-            f"dest_city={self.dest_city!r}, cost={self.cost})"
+            f"dest_city={self.dest_city!r}, cost={self.cost}, "
+            f"status={self.status!r})"
         )
