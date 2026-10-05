@@ -1,5 +1,6 @@
 from courier_delivery.value_objects import Weight, WeightDC
 from courier_delivery.entities import Parcel
+from courier_delivery.route import Route, ParcelNotFound
  
  
 def demo_weight() -> None:
@@ -124,10 +125,76 @@ def demo_parcel() -> None:
     print(f"is_valid_tracking('bad-format') -> {Parcel.is_valid_tracking('bad-format')}")
  
  
+def build_demo_route() -> Route:
+    parcels = [
+        Parcel(tracking="UA-100001", weight=500, dest_city="Kyiv", cost=50),
+        Parcel(tracking="UA-100002", weight=1200, dest_city="Lviv", cost=80),
+        Parcel(tracking="UA-100003", weight=3000, dest_city="Kyiv", cost=120),
+        Parcel(tracking="UA-100004", weight=15000, dest_city="Odesa", cost=300),
+        Parcel(tracking="UA-100005", weight=900, dest_city="Kyiv", cost=70),
+    ]
+    return Route(parcels)
+ 
+ 
+def demo_route() -> None:
+    route = build_demo_route()
+ 
+    print("=== 1. Протокол послідовності (3.1) ===")
+    print(f"len(route) -> {len(route)}")
+    print(f"route[0] -> {route[0]}")
+ 
+    sliced = route[0:2]
+    print(f"route[0:2] -> {sliced}")
+    print(f"type(route[0:2]) -> {type(sliced)}")  # саме Route, а не list
+ 
+    second_parcel = route[1]
+    print(f"route[1] in route -> {second_parcel in route}")
+    print(f"'UA-100002' in route -> {'UA-100002' in route}")
+    print(f"'ZZ-000000' in route -> {'ZZ-000000' in route}")
+ 
+    print("Обхід у циклі for:")
+    for parcel in route:
+        print(f"  {parcel.tracking} -> {parcel.dest_city}, {parcel.weight}")
+    print()
+ 
+    print("=== 2. Посторінковий обхід (3.2) ===")
+    # 5 елементів, по 2 на сторінку -> остання сторінка неповна (1 елемент)
+    for page_number, page in enumerate(route.pages(2), start=1):
+        print(f"Сторінка {page_number}: {[p.tracking for p in page]}")
+    print()
+ 
+    print("=== 3. Запит через виклик як функції (3.3) ===")
+    kyiv_only = route(city="Kyiv")
+    print(f"route(city='Kyiv') -> {[p.tracking for p in kyiv_only]}")
+ 
+    light_parcels = route(weight_max=1000)
+    print(f"route(weight_max=1000) -> {[p.tracking for p in light_parcels]}")
+ 
+    kyiv_light = route(city="Kyiv", weight_max=1000)
+    print(f"route(city='Kyiv', weight_max=1000) -> {[p.tracking for p in kyiv_light]}")
+ 
+    try:
+        route(unknown_field=1)
+    except TypeError as exc:
+        print(f"Невідомий критерій, перехоплено TypeError: {exc}")
+    print()
+ 
+    print("=== 4. Пошук за ідентифікатором у стилі EAFP (3.4) ===")
+    found = route.get("UA-100003")
+    print(f"route.get('UA-100003') -> {found}")
+ 
+    try:
+        route.get("ZZ-999999")
+    except ParcelNotFound as exc:
+        print(f"Відсутній ідентифікатор, перехоплено ParcelNotFound: {exc}")
+ 
+ 
 def main() -> None:
     demo_weight()
     print()
     demo_parcel()
+    print()
+    demo_route()
  
  
 if __name__ == "__main__":
