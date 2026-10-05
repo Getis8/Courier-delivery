@@ -1,4 +1,5 @@
 from courier_delivery.entities import Parcel
+from courier_delivery.decorators import validated
  
 ALLOWED_QUERY_CRITERIA = ("city", "weight_max")
  
@@ -82,6 +83,14 @@ class Route:
         if isinstance(other, Route):
             return other.__add__(self)
         return NotImplemented
+ 
+    # -- поповнення колекції новою посилкою (5.1) ------------------------------
+    @validated(tracking="non_empty", weight="positive", dest_city="non_empty", cost="positive")
+    def add_parcel(self, *, tracking: str, weight: float, dest_city: str, cost: float) -> Parcel:
+        parcel = Parcel(tracking=tracking, weight=weight, dest_city=dest_city, cost=cost)
+        self._parcels.append(parcel)
+        self._index[parcel.tracking] = parcel
+        return parcel
  
     def __repr__(self) -> str:
         return f"Route({self._parcels!r})"
