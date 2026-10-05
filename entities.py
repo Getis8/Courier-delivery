@@ -1,4 +1,8 @@
+import re
+ 
 from courier_delivery.value_objects import Weight
+ 
+TRACKING_PATTERN = re.compile(r"^[A-Z]{2}-\d{6,12}[A-Z]?$")
  
  
 class Parcel:
@@ -15,8 +19,12 @@ class Parcel:
  
     @tracking.setter
     def tracking(self, value: str) -> None:
-        if not isinstance(value, str) or not value.strip():
-            raise ValueError("трек-номер посилки не може бути порожнім")
+        if not Parcel.is_valid_tracking(value):
+            raise ValueError(
+                "трек-номер посилки має бути у форматі 'XX-123456' "
+                "(2 великі латинські літери, дефіс, 6-12 цифр, "
+                "опційно літера в кінці)"
+            )
         self._tracking = value
  
     # -- weight -----------------------------------------------------------
@@ -56,6 +64,23 @@ class Parcel:
         if value <= 0:
             raise ValueError("вартість доставки повинна бути додатною")
         self._cost = float(value)
+ 
+    # -- альтернативний конструктор (2.2) -----------------------------------
+    @classmethod
+    def from_dict(cls, data: dict) -> "Parcel":
+        return cls(
+            tracking=data["tracking"],
+            weight=data["weight"],
+            dest_city=data["dest_city"],
+            cost=data["cost"],
+        )
+ 
+    # -- статичний метод перевірки формату (2.2) -----------------------------
+    @staticmethod
+    def is_valid_tracking(value: str) -> bool:
+        if not isinstance(value, str):
+            return False
+        return bool(TRACKING_PATTERN.fullmatch(value))
  
     # -- рядкове подання для зручності демонстрації ------------------------
     def __repr__(self) -> str:
