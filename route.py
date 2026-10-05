@@ -62,6 +62,27 @@ class Route:
         except KeyError:
             raise ParcelNotFound(entity_id) from None
  
+    # -- об'єднання колекцій (4.1) --------------------------------------------
+    def __add__(self, other: "Route") -> "Route":
+        if not isinstance(other, Route):
+            return NotImplemented
+        combined = list(self._parcels)
+        seen_ids = set(self._index.keys())
+        for parcel in other:
+            if parcel.tracking not in seen_ids:
+                combined.append(parcel)
+                seen_ids.add(parcel.tracking)
+        return Route(combined)
+ 
+    def __radd__(self, other):
+        # sum([route_a, route_b, route_c]) стартує з 0: 0 + route_a.
+        # У цьому разі просто повертаємо копію поточної колекції.
+        if other == 0:
+            return Route(self._parcels)
+        if isinstance(other, Route):
+            return other.__add__(self)
+        return NotImplemented
+ 
     def __repr__(self) -> str:
         return f"Route({self._parcels!r})"
  
