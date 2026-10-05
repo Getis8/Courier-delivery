@@ -189,12 +189,112 @@ def demo_route() -> None:
         print(f"Відсутній ідентифікатор, перехоплено ParcelNotFound: {exc}")
  
  
+def demo_operators() -> None:
+    print("=== 1. Route: додавання двох колекцій і sum трьох ===")
+    route_a = Route([
+        Parcel(tracking="UA-200001", weight=500, dest_city="Kyiv", cost=50),
+        Parcel(tracking="UA-200002", weight=1200, dest_city="Lviv", cost=80),
+    ])
+    route_b = Route([
+        Parcel(tracking="UA-200002", weight=1200, dest_city="Lviv", cost=80),  # дублікат
+        Parcel(tracking="UA-200003", weight=3000, dest_city="Odesa", cost=120),
+    ])
+    route_c = Route([
+        Parcel(tracking="UA-200004", weight=700, dest_city="Kyiv", cost=60),
+    ])
+ 
+    combined = route_a + route_b
+    print(f"route_a + route_b -> {[p.tracking for p in combined]} "
+          f"(дублікат UA-200002 не продублювався)")
+ 
+    total = sum([route_a, route_b, route_c])
+    print(f"sum([route_a, route_b, route_c]) -> {[p.tracking for p in total]}")
+    print()
+ 
+    print("=== 2. Route + несумісний операнд ===")
+    try:
+        route_a + 5
+    except TypeError as exc:
+        print(f"Перехоплено TypeError: {exc}")
+    print()
+ 
+    print("=== 3. Арифметика Weight: +, -, з обох боків ===")
+    w1 = Weight(500)
+    w2 = Weight(300)
+    print(f"{w1} + {w2} -> {w1 + w2}")
+    print(f"{w1} - {w2} -> {w1 - w2}")
+    try:
+        w2 - w1
+    except ValueError as exc:
+        print(f"{w2} - {w1}, перехоплено ValueError: {exc}")
+ 
+    print(f"{w1} * 2 -> {w1 * 2}")
+    print(f"2 * {w1} -> {2 * w1}")
+ 
+    try:
+        w1 + 10
+    except TypeError as exc:
+        print(f"Weight + 10, перехоплено TypeError: {exc}")
+    print()
+ 
+    print("=== 4. min, max, sorted для списку Weight ===")
+    weights = [Weight(1500), Weight(300), Weight(800), Weight(50)]
+    print(f"список:  {[str(w) for w in weights]}")
+    print(f"min ->   {min(weights)}")
+    print(f"max ->   {max(weights)}")
+    print(f"sorted ->{[str(w) for w in sorted(weights)]}")
+ 
+ 
+def demo_validated_decorator() -> None:
+    print("=== 1. Parcel.change_status: коректний виклик ===")
+    p = Parcel(tracking="UA-300001", weight=500, dest_city="Kyiv", cost=50)
+    print(f"status до -> {p.status}")
+    p.change_status(status="in_transit")
+    print(f"status після change_status(status='in_transit') -> {p.status}")
+    print()
+ 
+    print("=== 2. Parcel.change_status: некоректне значення (one_of) ===")
+    try:
+        p.change_status(status="lost_in_space")
+    except ValueError as exc:
+        print(f"Перехоплено ValueError: {exc}")
+    print()
+ 
+    print("=== 3. Route.add_parcel: коректний виклик ===")
+    route = Route()
+    added = route.add_parcel(tracking="UA-300002", weight=1200, dest_city="Lviv", cost=90)
+    print(f"додано -> {added}, len(route) -> {len(route)}")
+    print()
+ 
+    print("=== 4. Route.add_parcel: некоректні значення, по одному на правило ===")
+    invalid_calls = [
+        ("non_empty (tracking)", dict(tracking="", weight=1200, dest_city="Lviv", cost=90)),
+        ("positive (weight)", dict(tracking="UA-300003", weight=-10, dest_city="Lviv", cost=90)),
+        ("non_empty (dest_city)", dict(tracking="UA-300004", weight=1200, dest_city="   ", cost=90)),
+        ("positive (cost)", dict(tracking="UA-300005", weight=1200, dest_city="Lviv", cost=0)),
+    ]
+    for label, kwargs in invalid_calls:
+        try:
+            route.add_parcel(**kwargs)
+        except ValueError as exc:
+            print(f"[{label}] Перехоплено ValueError: {exc}")
+    print()
+ 
+    print("=== 5. Метадані після декорування збережені (functools.wraps) ===")
+    print(f"Parcel.change_status.__name__ -> {Parcel.change_status.__name__!r}")
+    print(f"Route.add_parcel.__name__     -> {Route.add_parcel.__name__!r}")
+ 
+ 
 def main() -> None:
     demo_weight()
     print()
     demo_parcel()
     print()
     demo_route()
+    print()
+    demo_operators()
+    print()
+    demo_validated_decorator()
  
  
 if __name__ == "__main__":
