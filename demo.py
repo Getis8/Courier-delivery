@@ -1,6 +1,7 @@
 from courier_delivery.value_objects import Weight, WeightDC
 from courier_delivery.entities import Parcel
 from courier_delivery.route import Route, ParcelNotFound
+from courier_delivery.sessions import DispatchSession
  
  
 def demo_weight() -> None:
@@ -285,6 +286,37 @@ def demo_validated_decorator() -> None:
     print(f"Route.add_parcel.__name__     -> {Route.add_parcel.__name__!r}")
  
  
+def demo_dispatch_session() -> None:
+    print("=== 1. Успішне завершення сеансу: пакет змін застосовано ===")
+    route = Route()
+    route.add_parcel(tracking="UA-900000", weight=300, dest_city="Odesa", cost=40)
+    print(f"до сеансу -> {[p.tracking for p in route]}")
+ 
+    with DispatchSession(route) as session:
+        session.add_parcel(tracking="UA-900001", weight=500, dest_city="Kyiv", cost=50)
+        session.add_parcel(tracking="UA-900002", weight=700, dest_city="Lviv", cost=60)
+ 
+    print(f"після успішного сеансу -> {[p.tracking for p in route]}")
+    print()
+ 
+    print("=== 2. Сеанс, перерваний винятком: стан до/після однаковий ===")
+    before_tracking_ids = [p.tracking for p in route]
+    print(f"стан ДО сеансу з винятком -> {before_tracking_ids}")
+ 
+    try:
+        with DispatchSession(route) as session:
+            session.add_parcel(tracking="UA-900003", weight=500, dest_city="Kyiv", cost=50)
+            session.add_parcel(tracking="UA-900004", weight=900, dest_city="Lviv", cost=60)
+            raise RuntimeError("помилка під час пакетної відправки")
+    except RuntimeError as exc:
+        print(f"RuntimeError дійшов до місця виклику: {exc}")
+ 
+    after_tracking_ids = [p.tracking for p in route]
+    print(f"стан ПІСЛЯ сеансу з винятком -> {after_tracking_ids}")
+    print(f"стан до і після однаковий -> {before_tracking_ids == after_tracking_ids}")
+    print("(обидва add_parcel усередині перерваного блоку скасовано)")
+ 
+ 
 def main() -> None:
     demo_weight()
     print()
@@ -295,6 +327,8 @@ def main() -> None:
     demo_operators()
     print()
     demo_validated_decorator()
+    print()
+    demo_dispatch_session()
  
  
 if __name__ == "__main__":
